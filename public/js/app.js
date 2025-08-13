@@ -22,6 +22,9 @@ class FantasyTrackerApp {
     // Setup event listeners
     this.setupEventListeners();
     
+    // Show welcome screen by default
+    this.showWelcomeScreen();
+    
     // Check authentication status
     await this.checkAuth();
     
@@ -29,9 +32,8 @@ class FantasyTrackerApp {
     if (this.state.isAuthenticated) {
       await this.loadDashboard();
       this.startAutoRefresh();
-    } else {
-      this.showWelcomeScreen();
     }
+    // Welcome screen is already shown if not authenticated
   }
 
   setupEventListeners() {
@@ -69,16 +71,49 @@ class FantasyTrackerApp {
       this.switchTab('ai-insights');
       document.getElementById('ai-query-input')?.focus();
     });
+
+    // Settings button
+    document.getElementById('settings-btn')?.addEventListener('click', () => {
+      this.showSettings();
+    });
+
+    // Close settings modal
+    document.getElementById('close-settings')?.addEventListener('click', () => {
+      this.hideSettings();
+    });
+
+    // Theme toggle in settings
+    document.getElementById('theme-toggle-settings')?.addEventListener('click', () => {
+      this.toggleTheme();
+    });
+
+    // Logout button
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
+      this.logout();
+    });
+
+    // Close settings on background click
+    document.getElementById('settings-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'settings-modal') {
+        this.hideSettings();
+      }
+    });
   }
 
   async checkAuth() {
     try {
       const response = await fetch('/api/auth/status');
-      const data = await response.json();
-      this.state.isAuthenticated = data.authenticated || false;
+      if (response.ok) {
+        const data = await response.json();
+        this.state.isAuthenticated = data.authenticated || false;
+      } else {
+        // If auth status fails, assume not authenticated
+        this.state.isAuthenticated = false;
+      }
       return this.state.isAuthenticated;
     } catch (error) {
       console.error('Auth check failed:', error);
+      // If auth check fails, assume not authenticated and show welcome screen
       this.state.isAuthenticated = false;
       return false;
     }
@@ -402,6 +437,27 @@ class FantasyTrackerApp {
     setInterval(() => {
       this.loadDashboard();
     }, 5 * 60 * 1000);
+  }
+
+  showSettings() {
+    document.getElementById('settings-modal')?.classList.remove('hidden');
+  }
+
+  hideSettings() {
+    document.getElementById('settings-modal')?.classList.add('hidden');
+  }
+
+  async logout() {
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (response.ok) {
+        this.state.isAuthenticated = false;
+        this.hideSettings();
+        this.showWelcomeScreen();
+      }
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   }
 }
 
