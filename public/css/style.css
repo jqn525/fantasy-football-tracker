@@ -1,0 +1,184 @@
+/* Custom styles for Fantasy Football Tracker */
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+/* Tab styles */
+.tab-btn {
+  @apply text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition-colors;
+}
+
+.tab-btn.active {
+  @apply text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400;
+}
+
+.tab-pane {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Player card styles */
+.player-card {
+  @apply bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 dark:border-gray-700;
+}
+
+.player-card:hover {
+  transform: translateY(-2px);
+}
+
+.player-status-healthy {
+  @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+}
+
+.player-status-questionable {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+}
+
+.player-status-doubtful {
+  @apply bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400;
+}
+
+.player-status-out {
+  @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+}
+
+/* AI Insight cards */
+.ai-insight-card {
+  @apply bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-700;
+}
+
+.confidence-high {
+  @apply text-green-600 dark:text-green-400 font-semibold;
+}
+
+.confidence-medium {
+  @apply text-yellow-600 dark:text-yellow-400 font-semibold;
+}
+
+.confidence-low {
+  @apply text-red-600 dark:text-red-400 font-semibold;
+}
+
+/* News item styles */
+.news-item {
+  @apply bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-lg transition-all duration-300 border border-gray-200 dark:border-gray-700;
+}
+
+.news-urgent {
+  @apply border-l-4 border-red-500;
+}
+
+.news-high {
+  @apply border-l-4 border-yellow-500;
+}
+
+.news-normal {
+  @apply border-l-4 border-blue-500;
+}
+
+/* Chart container */
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+/* Loading skeleton */
+.skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  @apply bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500 dark:bg-gray-500;
+}
+
+/* Toast notifications */
+.toast {
+  @apply fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 flex items-center space-x-3 min-w-[300px] border border-gray-200 dark:border-gray-700;
+  animation: slideIn 0.3s ease-out;
+  z-index: 9999;
+}
+
+.toast-success {
+  @apply border-l-4 border-green-500;
+}
+
+.toast-error {
+  @apply border-l-4 border-red-500;
+}
+
+.toast-warning {
+  @apply border-l-4 border-yellow-500;
+}
+
+.toast-info {
+  @apply border-l-4 border-blue-500;
+}
+
+/* Responsive utilities */
+@media (max-width: 640px) {
+  .hide-mobile {
+    display: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    @apply bg-white text-black;
+  }
+}
+
+/* Custom utility classes */
+.gradient-text {
+  @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+}
+
+.glass-effect {
+  @apply bg-white/70 dark:bg-gray-800/70 backdrop-blur-md;
+}
+
+/* Hover effects */
+.hover-lift {
+  @apply transition-transform duration-300 hover:-translate-y-1;
+}
+
+.hover-glow {
+  @apply transition-shadow duration-300 hover:shadow-2xl hover:shadow-blue-500/20;
+}

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+db/fantasy.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+server.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build files
+dist/
+build/
+.vercel
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Turso
+.turso/
