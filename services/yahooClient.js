@@ -1,29 +1,50 @@
-const YahooFantasy = require('yahoo-fantasy');
+let YahooFantasy;
+
+try {
+  YahooFantasy = require('yahoo-fantasy');
+} catch (error) {
+  console.error('yahoo-fantasy package not available:', error.message);
+  YahooFantasy = null;
+}
 
 class YahooClient {
   constructor() {
     this.yf = null;
     this.isAuthenticated = false;
+    this.isInitialized = false;
   }
 
   async initialize() {
     try {
+      // Check if required environment variables are present
+      if (!process.env.YAHOO_CLIENT_ID || !process.env.YAHOO_CLIENT_SECRET) {
+        console.warn('Yahoo API credentials not configured. Yahoo features will be disabled.');
+        return false;
+      }
+
+      if (!YahooFantasy) {
+        console.error('yahoo-fantasy package not available. Yahoo features will be disabled.');
+        return false;
+      }
+
       this.yf = new YahooFantasy(
         process.env.YAHOO_CLIENT_ID,
         process.env.YAHOO_CLIENT_SECRET,
-        process.env.YAHOO_REDIRECT_URI
+        process.env.YAHOO_REDIRECT_URI || 'http://localhost:3000/api/auth/callback'
       );
       
+      this.isInitialized = true;
       console.log('Yahoo Fantasy client initialized');
       return true;
     } catch (error) {
       console.error('Failed to initialize Yahoo Fantasy client:', error);
+      this.isInitialized = false;
       return false;
     }
   }
 
   getAuthUrl() {
-    if (!this.yf) {
+    if (!this.isInitialized || !this.yf) {
       throw new Error('Yahoo client not initialized');
     }
     return this.yf.auth();
@@ -31,8 +52,15 @@ class YahooClient {
 
   async authenticate(authCode) {
     try {
+      if (!this.isInitialized) {
+        const initialized = await this.initialize();
+        if (!initialized) {
+          throw new Error('Failed to initialize Yahoo client');
+        }
+      }
+
       if (!this.yf) {
-        await this.initialize();
+        throw new Error('Yahoo client not available');
       }
 
       const tokens = await this.yf.auth(authCode);
@@ -86,6 +114,10 @@ class YahooClient {
 
   async getUserLeagues(gameKey = 'nfl') {
     try {
+      if (!this.isInitialized || !this.yf) {
+        throw new Error('Yahoo client not initialized');
+      }
+
       if (!this.isAuthenticated) {
         throw new Error('Not authenticated with Yahoo');
       }

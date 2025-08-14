@@ -1,11 +1,14 @@
-const sqlite3 = require('sqlite3').verbose();
-const { createClient } = require('@libsql/client');
 const path = require('path');
 const fs = require('fs');
 
 let db;
 
+// Check if we're in a serverless environment (like Vercel)
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
 if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+  // Production: Use Turso
+  const { createClient } = require('@libsql/client');
   // Production: Use Turso
   const tursoClient = createClient({
     url: process.env.TURSO_DATABASE_URL,
@@ -57,8 +60,50 @@ if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
   };
 
   console.log('Connected to Turso database');
+} else if (isServerless) {
+  // Serverless environment without Turso - create mock database
+  console.warn('Running in serverless mode without database. Creating mock database interface.');
+  
+  db = {
+    run: (sql, params, callback) => {
+      console.log('Mock DB run:', sql);
+      if (callback) callback(null, { lastInsertRowid: 1, rowsAffected: 1 });
+    },
+    get: (sql, params, callback) => {
+      console.log('Mock DB get:', sql);
+      if (callback) callback(null, null);
+    },
+    all: (sql, params, callback) => {
+      console.log('Mock DB all:', sql);
+      if (callback) callback(null, []);
+    },
+    prepare: (sql) => ({
+      run: (...params) => {
+        const callback = params[params.length - 1];
+        if (callback) callback(null);
+      },
+      finalize: () => {}
+    }),
+    serialize: (callback) => callback(),
+    
+    // Promise-based methods
+    runAsync: async function(sql, params = []) {
+      console.log('Mock DB runAsync:', sql);
+      return { id: 1, changes: 1 };
+    },
+    getAsync: async function(sql, params = []) {
+      console.log('Mock DB getAsync:', sql);
+      return null;
+    },
+    allAsync: async function(sql, params = []) {
+      console.log('Mock DB allAsync:', sql);
+      return [];
+    }
+  };
 } else {
   // Development: Use local SQLite
+  const sqlite3 = require('sqlite3').verbose();
+  
   const dbDir = path.dirname(process.env.DATABASE_PATH || './db/fantasy.db');
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });

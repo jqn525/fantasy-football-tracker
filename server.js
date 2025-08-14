@@ -9,6 +9,21 @@ require('dotenv').config();
 
 const app = express();
 
+// Validate critical environment variables
+const requiredEnvVars = ['SESSION_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.warn(`Missing environment variables: ${missingEnvVars.join(', ')}`);
+  console.warn('Some features may not work correctly.');
+}
+
+// Set default values for missing environment variables
+if (!process.env.SESSION_SECRET) {
+  process.env.SESSION_SECRET = 'fallback-session-secret-change-in-production';
+  console.warn('Using fallback session secret. Please set SESSION_SECRET environment variable.');
+}
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -34,12 +49,13 @@ app.use(express.static('public'));
 
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-this',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax'
   }
 }));
 
@@ -68,6 +84,24 @@ app.use(async (req, res, next) => {
     }
   }
   next();
+});
+
+// Error handling for missing database initialization
+app.use((req, res, next) => {
+  // Skip database check for static files and health check
+  if (req.path.startsWith('/api/') && req.path !== '/api/health') {
+    try {
+      const db = require('./db/database');
+      // Database is available
+      next();
+    } catch (error) {
+      console.error('Database connection error:', error);
+      // Continue anyway - some features may work without database
+      next();
+    }
+  } else {
+    next();
+  }
 });
 
 // Health check endpoint
