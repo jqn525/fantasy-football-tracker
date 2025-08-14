@@ -43,6 +43,33 @@ app.use(session({
   }
 }));
 
+// Token refresh middleware
+app.use(async (req, res, next) => {
+  // Check if tokens need refresh for authenticated sessions
+  if (req.session.authenticated && req.session.tokenExpiry) {
+    const timeUntilExpiry = req.session.tokenExpiry - Date.now();
+    
+    // Refresh if token expires in less than 1 hour
+    if (timeUntilExpiry < 60 * 60 * 1000) {
+      try {
+        const yahooClient = require('./services/yahooClient');
+        await yahooClient.setTokens(req.session.accessToken, req.session.refreshToken);
+        const newTokens = await yahooClient.refreshTokens();
+        
+        req.session.accessToken = newTokens.access_token;
+        req.session.refreshToken = newTokens.refresh_token;
+        req.session.tokenExpiry = Date.now() + (newTokens.expires_in * 1000);
+        
+        console.log('Yahoo tokens refreshed automatically');
+      } catch (error) {
+        console.error('Auto token refresh failed:', error);
+        // Don't fail the request, just log the error
+      }
+    }
+  }
+  next();
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -51,8 +78,8 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', require('./api/auth'));
 app.use('/api/ai', require('./api/ai'));
-// app.use('/api/league', require('./api/league'));
-// app.use('/api/players', require('./api/players'));
+app.use('/api/league', require('./api/league'));
+app.use('/api/players', require('./api/players'));
 // app.use('/api/news', require('./api/news'));
 
 // Serve index.html for all other routes (SPA support)

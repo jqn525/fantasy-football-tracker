@@ -3,6 +3,7 @@ class FantasyTrackerApp {
   constructor() {
     this.state = {
       isAuthenticated: false,
+      currentUser: null,
       currentTeam: null,
       currentWeek: 1,
       roster: [],
@@ -22,18 +23,18 @@ class FantasyTrackerApp {
     // Setup event listeners
     this.setupEventListeners();
     
-    // Show welcome screen by default
-    this.showWelcomeScreen();
-    
-    // Check authentication status
+    // Check authentication status first
     await this.checkAuth();
     
     // Load initial data if authenticated
     if (this.state.isAuthenticated) {
+      console.log('User authenticated, loading dashboard...');
       await this.loadDashboard();
       this.startAutoRefresh();
+    } else {
+      console.log('User not authenticated, showing welcome screen...');
+      this.showWelcomeScreen();
     }
-    // Welcome screen is already shown if not authenticated
   }
 
   setupEventListeners() {
@@ -102,18 +103,25 @@ class FantasyTrackerApp {
 
   async checkAuth() {
     try {
+      console.log('Checking authentication status...');
       const response = await fetch('/api/auth/status');
       if (response.ok) {
         const data = await response.json();
         this.state.isAuthenticated = data.authenticated || false;
+        if (data.authenticated) {
+          console.log('User is authenticated:', data.user);
+          this.state.currentUser = data.user;
+        } else {
+          console.log('User is not authenticated');
+        }
       } else {
-        // If auth status fails, assume not authenticated
+        console.error('Auth status check failed with status:', response.status);
         this.state.isAuthenticated = false;
       }
       return this.state.isAuthenticated;
     } catch (error) {
       console.error('Auth check failed:', error);
-      // If auth check fails, assume not authenticated and show welcome screen
+      // If auth check fails, assume not authenticated
       this.state.isAuthenticated = false;
       return false;
     }
@@ -133,11 +141,8 @@ class FantasyTrackerApp {
     this.showLoading(true);
     
     try {
-      // For now, we'll use mock data since the API routes aren't implemented yet
-      // In production, these would be real API calls
-      
-      // Simulate API calls
-      await this.loadMockData();
+      // Try to load real data from Yahoo API first
+      await this.loadRealData();
       
       // Update UI with loaded data
       this.updateDashboardUI();
@@ -154,8 +159,107 @@ class FantasyTrackerApp {
     }
   }
 
+  async loadRealData() {
+    try {
+      console.log('Loading real team data from Yahoo...');
+      
+      // Fetch user's team data
+      const response = await fetch('/api/players/my-team');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch team data: ${response.status}`);
+      }
+      
+      const teamData = await response.json();
+      console.log('Received team data:', teamData);
+      
+      // Update state with real data
+      this.state.currentTeam = {
+        name: teamData.team.name,
+        wins: teamData.team.wins,
+        losses: teamData.team.losses,
+        rank: teamData.team.rank,
+        pointsFor: teamData.team.points_for,
+        pointsAgainst: teamData.team.points_against
+      };
+
+      // Process roster data
+      this.state.roster = teamData.roster.map(player => ({
+        id: player.player_key,
+        name: player.name?.full || 'Unknown Player',
+        position: player.eligible_positions?.[0]?.position || 'N/A',
+        team: player.editorial_team_abbr || 'N/A',
+        status: this.getPlayerStatus(player),
+        points: this.getPlayerPoints(player),
+        projected: this.getPlayerProjected(player),
+        photo: player.headshot?.url || null
+      }));
+
+      // Process current matchup
+      if (teamData.current_matchup) {
+        const userTeam = teamData.current_matchup.teams.find(team => 
+          team.team_key === teamData.team.key
+        );
+        const opponent = teamData.current_matchup.teams.find(team => 
+          team.team_key !== teamData.team.key
+        );
+        
+        this.state.currentMatchup = {
+          myScore: userTeam?.team_points?.total || 0,
+          oppScore: opponent?.team_points?.total || 0,
+          oppName: opponent?.name || 'Opponent'
+        };
+      } else {
+        this.state.currentMatchup = {
+          myScore: 0,
+          oppScore: 0,
+          oppName: 'No Matchup'
+        };
+      }
+
+      this.state.currentWeek = teamData.league.current_week || 1;
+      
+    } catch (error) {
+      console.error('Failed to load real data:', error);
+      // Fall back to mock data if real data fails
+      await this.loadMockData();
+    }
+  }
+
+  getPlayerStatus(player) {
+    if (player.status === 'IR') return 'injured';
+    if (player.status === 'O') return 'out';
+    if (player.status === 'Q') return 'questionable';
+    if (player.status === 'D') return 'doubtful';
+    return 'healthy';
+  }
+
+  getPlayerPoints(player) {
+    // Get current week points if available
+    if (player.player_stats?.stats) {
+      const pointsStat = player.player_stats.stats.find(stat => 
+        stat.stat_id === '0' // Points stat ID
+      );
+      return parseFloat(pointsStat?.value || 0);
+    }
+    return 0;
+  }
+
+  getPlayerProjected(player) {
+    // Get projected points if available
+    if (player.player_projected_stats?.stats) {
+      const projectedStat = player.player_projected_stats.stats.find(stat => 
+        stat.stat_id === '0' // Points stat ID
+      );
+      return parseFloat(projectedStat?.value || 0);
+    }
+    return 0;
+  }
+
   async loadMockData() {
-    // Mock data for demonstration
+    // Fallback mock data for when real data fails
+    console.log('Using mock data as fallback');
+    
     this.state.currentTeam = {
       name: 'My Fantasy Team',
       wins: 5,
